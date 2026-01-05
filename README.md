@@ -1,13 +1,21 @@
+<p align="center">
+<img width="338" height="190" alt="impact iq 16x9" src="https://github.com/user-attachments/assets/436670cb-9aec-4ae9-8a5c-ace341ff9283" />
+  <br/>
+<em><strong>Be smarter about every change </strong></em>
+    <br/>
+  <br/>
+  <em>One-Click, Designed for Everyone</em>
+</p>
 
-## This all-in-one solution is designed to be ran by ANYONE. 
-- Everything within the script is limited to your access within the Power BI environment.
+# Impact Analysis and Governance for Power BI + Microsoft Fabric
+
+### This all-in-one solution is designed to be ran by ANYONE. 
+- Everything within the script is limited to your access within the Power BI and/or Fabric environment.
 - All computer requirements are at the user level and do not require admin privileges.
-- There are ZERO pre-reqs. A one-click solution is offered that stays updated with the latest features.
+- There are ZERO pre-reqs. The one-click solution stays updated with the latest features.
   
 *Have specific Reports and/or Models downloaded you want to analyze? Don't have direct access to the Workspace but have the PBIX? Check out the local version here: https://github.com/chris1642/Local-Power-BI-Impact-Analysis-Governance*
 
-
-# Power BI Governance & Impact Analysis Solution
 
 ## What It Does
 This provides a quick and automated way to identify where and how specific fields, measures, and tables are used across Power BI reports in all workspaces down to the visual level. It also backs up and breaks down the details of your models, reports, and dataflows for easy review, giving you an all-in-one **Power BI & Fabric Governance** solution.
