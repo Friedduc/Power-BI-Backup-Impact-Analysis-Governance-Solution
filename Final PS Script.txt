@@ -513,7 +513,7 @@ function Show-WorkspacePicker {
     $form.Text          = "Select Workspaces"
     $form.StartPosition = 'CenterScreen'
     $form.Size          = New-Object System.Drawing.Size(520,580)
-    $form.TopMost       = $true
+	$form.TopMost       = $true
 
     # Instruction label
     $lbl                = New-Object System.Windows.Forms.Label
@@ -538,7 +538,7 @@ function Show-WorkspacePicker {
     # CheckedListBox
     $clb                = New-Object System.Windows.Forms.CheckedListBox
     $clb.Location       = New-Object System.Drawing.Point(12,70)
-    $clb.Size           = New-Object System.Drawing.Size(480,380)
+	$clb.Size           = New-Object System.Drawing.Size(480,380)
     $clb.CheckOnClick   = $true
     $clb.Sorted         = $true
 
@@ -549,6 +549,9 @@ function Show-WorkspacePicker {
         $allWorkspaceItems += [pscustomobject]@{ Display=$display; Id=$ws.id; Name=$ws.name }
     }
 
+    # Maintain persistent checked state across searches
+    $persistentCheckedIds = @{}
+
     # Initial population
     foreach ($item in $allWorkspaceItems) {
         [void]$clb.Items.Add($item)
@@ -556,16 +559,21 @@ function Show-WorkspacePicker {
     $clb.DisplayMember = 'Display'
     $form.Controls.Add($clb)
 
-    # Search filter logic
+	# Track when items are checked/unchecked
+    $clb.Add_ItemCheck({
+        param($sender, $e)
+        $item = $clb.Items[$e.Index]
+        if ($e.NewValue -eq 'Checked') {
+            $persistentCheckedIds[$item.Id] = $true
+        } elseif ($e.NewValue -eq 'Unchecked') {
+            $persistentCheckedIds.Remove($item.Id)
+        }
+    })
+
+	# Search filter logic
     $txtSearch.Add_TextChanged({
         $searchText = $txtSearch.Text
         $clb.BeginUpdate()
-        
-        # Store checked states before clearing
-        $checkedIds = @{}
-        foreach ($item in $clb.CheckedItems) {
-            $checkedIds[$item.Id] = $true
-        }
         
         $clb.Items.Clear()
         
@@ -577,8 +585,8 @@ function Show-WorkspacePicker {
             if ([string]::IsNullOrWhiteSpace($searchText) -or 
                 $item.Display -imatch $escapedSearchText) {
                 $index = $clb.Items.Add($item)
-                # Restore checked state if it was previously checked
-                if ($checkedIds.ContainsKey($item.Id)) {
+                # Restore checked state from persistent store
+                if ($persistentCheckedIds.ContainsKey($item.Id)) {
                     $clb.SetItemChecked($index, $true)
                 }
             }
@@ -599,11 +607,25 @@ function Show-WorkspacePicker {
     })
     $form.Controls.Add($chkAll)
 
+    # "Clear All" button
+    $btnClearAll       = New-Object System.Windows.Forms.Button
+    $btnClearAll.Text  = "Clear All"
+    $btnClearAll.Width = 80
+    $btnClearAll.Location = New-Object System.Drawing.Point(90,458)
+    $btnClearAll.Add_Click({
+        # Uncheck all items - ItemCheck events will update persistent store
+        for ($i=0; $i -lt $clb.Items.Count; $i++) {
+            $clb.SetItemChecked($i, $false)
+        }
+        $chkAll.Checked = $false
+    })
+    $form.Controls.Add($btnClearAll)
+
     # "Include My Workspace" checkbox
     $chkMy             = New-Object System.Windows.Forms.CheckBox
     $chkMy.Text        = "Include 'My Workspace'"
     $chkMy.AutoSize    = $true
-    $chkMy.Location    = New-Object System.Drawing.Point(120,460)
+    $chkMy.Location    = New-Object System.Drawing.Point(184,460)
     $chkMy.Checked     = $false
     $form.Controls.Add($chkMy)
 
@@ -641,11 +663,8 @@ function Show-WorkspacePicker {
 
     [void]$form.ShowDialog()
 
-    # Gather selections
-    $selectedIds = @()
-    foreach ($item in $clb.CheckedItems) {
-        $selectedIds += $item.Id
-    }
+    # Gather selections from persistent store (to include items not currently visible due to search)
+    $selectedIds = @($persistentCheckedIds.Keys)
 
     if ($form.Tag -eq 'Cancel') {
         throw "User cancelled workspace selection."
@@ -653,13 +672,15 @@ function Show-WorkspacePicker {
 
     $timedOut = ($form.Tag -eq 'Timeout')
 
-    # If nothing selected (or you want to keep your previous behavior), default to all
-    if ($selectedIds.Count -eq 0) {
-        $selectedIds = $Workspaces.id
-    }
-
     # Include My Workspace only if checked… except on timeout, then force include
     $includeMy = if ($timedOut) { $true } else { $chkMy.Checked }
+
+    # If nothing selected from workspace list:
+    # - If "Include My Workspace" is checked, process only My Workspace (empty array for regular workspaces)
+    # - Otherwise, default to all workspaces (backwards compatibility with timeout/cancel behavior)
+    if ($selectedIds.Count -eq 0 -and -not $includeMy) {
+        $selectedIds = $Workspaces.id
+    }
 
     return [pscustomobject]@{
         SelectedWorkspaceIds = $selectedIds
@@ -667,7 +688,6 @@ function Show-WorkspacePicker {
         TimedOut             = $timedOut
     }
 }
-
 
 
 # Define renaming maps for each type of object
